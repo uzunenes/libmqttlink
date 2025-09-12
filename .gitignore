@@ -1,0 +1,8 @@
+*.o
+obj/*
+libfoiot.so
+*.pc
+.history
+*.avi
+*.log
+*.mp4
