@@ -1,6 +1,6 @@
 *.o
 obj/*
-libfoiot.so
+libmqttlink.so
 *.pc
 .history
 *.avi
