@@ -1,130 +1,120 @@
-#ifndef libmqttlink_UTILITY_FUNCTIONS_H
-#define libmqttlink_UTILITY_FUNCTIONS_H
+#ifndef LIBMQTTLINK_UTILITY_FUNCTIONS_H
+#define LIBMQTTLINK_UTILITY_FUNCTIONS_H
 
 #include <stddef.h>
 
-
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
-    typedef struct
-    {
-        char net_add[64];
-        int port;
-    } libmqttlink_ntp_server_info;
+typedef struct {
+    char net_add[64];
+    int port;
+} libmqttlink_ntp_server_info;
 
+/**
+ * Sleep for a given number of milliseconds.
+ * @param milisec Milliseconds to sleep.
+ */
+void libmqttlink_sleep_milisec(unsigned int milisec);
 
-    /**
-    *   This function temporarily suspends the operation for a certain period of time.
-    *   @param milisec: Pause time in milliseconds.
-    *   @return  None
-    **/
-    void
-    mqttlink_sleep_milisec(unsigned int milisec);
+/**
+ * Get current monotonic time in seconds (nanosecond precision).
+ * @return Time in seconds.
+ */
+double libmqttlink_get_second_nanosec(void);
 
+/**
+ * Check if a file exists.
+ * @param file_name File path.
+ * @return 0 if exists, -1 if not.
+ */
+int libmqttlink_check_if_a_file_exists(const char* file_name);
 
-    /**
-    *   @param None 
-    *   @return Get time as nanosecond. 
-    **/
-    double 
-    mqttlink_get_second_nanosec(void);
+/**
+ * Get current system time in seconds since epoch.
+ * @return Time in seconds.
+ */
+double libmqttlink_get_system_time(void);
 
+/**
+ * Get current system date and time as string.
+ * @param time_date Output buffer for date/time string.
+ * @return 0 on success, -1 on error.
+ */
+int libmqttlink_get_current_system_time_and_date(char *time_date);
 
-    /**
-    *   Check if a file exists
-    *   @param file_name    
-    *   @return None
-    **/
-    int
-    mqttlink_check_if_a_file_exists(const char* file_name); 
+/**
+ * Get time difference (in seconds) from remote NTP server.
+ * @param ntp_server_list List of NTP servers.
+ * @param ntp_server_list_len Length of server list.
+ * @return Time difference in seconds, -1 on error.
+ */
+int libmqttlink_get_ntp_time_difference_second(const libmqttlink_ntp_server_info* ntp_server_list, int ntp_server_list_len);
 
+/**
+ * Get system default network interface name.
+ * @param interface Output buffer for interface name.
+ * @return 0 on success, -1 on error.
+ */
+int libmqttlink_get_default_interface(char *interface);
 
-    /**
-    *   System time.
-    *   @param None 
-    *   @return Get system time but since at 1970.
-    **/
-    double
-    mqttlink_get_system_time(void);
+/**
+ * Get primary IP address of default network interface.
+ * @param dst Output buffer for IP address.
+ * @return 0 on success, -1 on error.
+ */
+int libmqttlink_get_primary_IP(char* dst);
 
+/**
+ * Encrypt a file using AES-256-CBC.
+ * @param inputFilePath Path to input file.
+ * @param outputFilePath Path to output encrypted file.
+ * @param key Encryption key.
+ * @param iv Initialization vector.
+ * @return 0 on success, -1 on error.
+ */
+int libmqttlink_encrypt_file(const char* inputFilePath, const char* outputFilePath, const unsigned char* key, const unsigned char* iv);
 
-    /**
-    *   Get system date and time.
-    *   @param None     
-    *   @return Date and system time. =>  03-27-2023  13:28:45.234567
-    **/
-    int
-    mqttlink_get_current_system_time_and_date(char *time_date);
+/**
+ * Encrypt a text string and save encrypted data, key, and IV to files.
+ * @param input_text Plaintext string.
+ * @param output_bin Output encrypted binary file path.
+ * @param output_key Output key file path.
+ * @param output_iv Output IV file path.
+ * @return 1 on success, 0 on error.
+ */
+int libmqttlink_creat_encrypt_text(const char* input_text, const char* output_bin, const char* output_key, const char* output_iv);
 
+/**
+ * Decrypt a file using AES-256-CBC.
+ * @param encrypted_file Path to encrypted file.
+ * @param key_file Path to key file.
+ * @param iv_file Path to IV file.
+ * @param decrypted_data Output pointer for decrypted data.
+ * @param decrypted_len Output length of decrypted data.
+ * @return 1 on success, -1 on error.
+ */
+int libmqttlink_decrypt_file(const char* encrypted_file, const char* key_file, const char* iv_file, unsigned char** decrypted_data, size_t* decrypted_len);
 
-    /**
-    *   Get system time diff second remote NTP server
-    *   @param server_add_list, list_len    
-    *   @return time diff second if err return -1
-    **/
-    int
-    mqttlink_get_ntp_time_difference_second(const libmqttlink_ntp_server_info* ntp_server_list, int ntp_server_list_len);
+/**
+ * Encode data to Base64 string.
+ * @param input Input data.
+ * @param length Length of input data.
+ * @return Pointer to encoded string (must be freed by caller).
+ */
+char* libmqttlink_base64_encode(const unsigned char* input, size_t length);
 
-
-    /**
-    *   Get system default net interface
-    *   @param interface name dst
-    *   @return if err return -1
-    **/
-    int
-    get_default_interface(char *interface);
-
-
-    /**
-    *   Get system IP add
-    *   @param ip address dst
-    *   @return if err return -1
-    **/   
-    int
-    get_primary_IP(char* dst);
-
-    /**
-    *   Encrypt a file with openssl-aes_256
-    *   @param inputFilePath file path to encrypt
-    *   @param outputFilePath encrypted output file path
-    *   @param key openssl key for encrypt
-    *   @param iv openssl iv for encrypt
-    *   @return if err return -1 
-    **/
-    int mqttlink_encrypt_file(const char* inputFilePath, const char* outputFilePath, const unsigned char* key, const unsigned char* iv); 
-
-
-    /**
-    * Encrypts data using AES-256-CBC and saves to files
-    * @param input_text Plaintext string to encrypt
-    * @param output_bin Path for output encrypted binary file
-    * @param output_key Path for output encryption key file
-    * @param output_iv Path for output initialization vector file
-    * @return 1 on success, 0 on failure
-    **/
-    int mqttlink_creat_encrypt_text(const char* input_text, const char* output_bin ,const char* output_key, const char* output_iv);
-
-    /**
-    * Decrypts a file using AES-256-CBC
-    * @param encrypted_file Path to encrypted file as .bin
-    * @param key_file Path to key file (32 bytes)
-    * @param iv_file Path to IV file (16 bytes)
-    * @param decrypted_data Output buffer for decrypted data
-    * @param decrypted_len Output length of decrypted data
-    * @return 1 on success, -1 on file errors, 0 on decryption failures
-    */
-    int mqttlink_decrypt_file(const char* encrypted_file, const char* key_file, const char* iv_file, unsigned char** decrypted_data, size_t* decrypted_len);
-
-
-    char* mqttlink_base64_encode(const unsigned char* input, size_t length);
-
-    int mqttlink_check_basic_auth(const char* auth_header, const char* src_auth); 
+/**
+ * Check HTTP Basic Auth header against username:password.
+ * @param auth_header Authorization header string.
+ * @param src_auth Username:password string.
+ * @return 1 if matches, 0 if not.
+ */
+int libmqttlink_check_basic_auth(const char* auth_header, const char* src_auth);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // libmqttlink_UTILITY_FUNCTIONS_H
+#endif // LIBMQTTLINK_UTILITY_FUNCTIONS_H

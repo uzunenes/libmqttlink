@@ -42,8 +42,8 @@ mqttlink.so: $(build_mqttlink_mosq) libmqttlink_utility_functions.o
 libmqttlink_mosq.o: src/libmqttlink_mosq.c include/libmqttlink_mosq.h
 	gcc -O3 -Wall -fpic -c src/libmqttlink_mosq.c $(params)
 
-libmqttlink_utility_functions.o: src/libmqttlink_utility_functions.cpp include/libmqttlink_utility_functions.h
-	g++ -O3 -Wall -fpic -c src/libmqttlink_utility_functions.cpp $(params)
+libmqttlink_utility_functions.o: src/libmqttlink_utility_functions.c include/libmqttlink_utility_functions.h
+	g++ -O3 -Wall -fpic -c src/libmqttlink_utility_functions.c $(params)
 
 
 install: 
