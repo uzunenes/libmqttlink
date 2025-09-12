@@ -39,10 +39,10 @@ static int g_cikis_sinyali = 0;
 int
 main(void)
 {
-    const char *server_ip_address = 
+    const char *server_ip_address = "1.1.1.1";
     int server_port = 1883;
-    const char *password = 
-    const char *user_name = 
+    const char *password = "a";
+    const char *user_name = "b";
 
 	// Subject examples
     const char *sbj1 = "mqttlink_test";
@@ -89,8 +89,7 @@ main(void)
 
 	// Terminate the connection.
     mqttlink_finished_mosq();
-    printf("Programdan cikildi.");
-    mqttlink_log_close();
+    printf("by :)");
 
     return 0;
 }

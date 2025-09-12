@@ -34,23 +34,23 @@ endif
 
 all: mqttlink.so
 
-mqttlink.so: $(build_mqttlink_mosq) libmqttlink_mosq_utility_functions.o
-	g++ -shared -o libmqttlink.so $(build_mqttlink_mosq) libmqttlink_mosq_utility_functions.o $(libs) $(params) -lpthread -ljansson 
+mqttlink.so: $(build_mqttlink_mosq) libmqttlink_utility_functions.o
+	g++ -shared -o libmqttlink.so $(build_mqttlink_mosq) libmqttlink_utility_functions.o $(libs) $(params) -lpthread 
 	strip --strip-unneeded libmqttlink.so
 
 
 libmqttlink_mosq.o: src/libmqttlink_mosq.c include/libmqttlink_mosq.h
 	gcc -O3 -Wall -fpic -c src/libmqttlink_mosq.c $(params)
 
-libmqttlink_mosq_utility_functions.o: src/libmqttlink_mosq_utility_functions.cpp include/libmqttlink_mosq_utility_functions.h
-	g++ -O3 -Wall -fpic -c src/libmqttlink_mosq_utility_functions.cpp $(params)
+libmqttlink_utility_functions.o: src/libmqttlink_utility_functions.cpp include/libmqttlink_utility_functions.h
+	g++ -O3 -Wall -fpic -c src/libmqttlink_utility_functions.cpp $(params)
 
 
 install: 
 	@rm -rf /usr/local/include/libmqttlink*
 	@mkdir -p /usr/local/include/libmqttlink
 	
-	@cp include/libmqttlink_mosq_utility_functions.h  $(include_h) /usr/local/include/libmqttlink
+	@cp include/libmqttlink_utility_functions.h  $(include_h) /usr/local/include/libmqttlink
 
 	@rm -f /usr/local/lib/libmqttlink.so*
 	@cp libmqttlink.so /usr/local/lib/libmqttlink.so.$(version)
