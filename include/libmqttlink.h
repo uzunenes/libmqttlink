@@ -1,5 +1,5 @@
-#ifndef LIBMQTTLINK_MOSQ_H
-#define LIBMQTTLINK_MOSQ_H
+#ifndef libmqttlink_H
+#define libmqttlink_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,19 +10,19 @@ extern "C" {
 /**
  * Connection state for MQTT link.
  */
-enum _enum_libmqttlink_mosq_connection_state
+enum _enum_libmqttlink_connection_state
 {
-    e_libmqttlink_mosq_connection_state_connection_false,
-    e_libmqttlink_mosq_connection_state_connection_true
+    e_libmqttlink_connection_state_connection_false,
+    e_libmqttlink_connection_state_connection_true
 };
 
 /**
  * Message storage flag for MQTT broker.
  */
-enum _enum_libmqttlink_mosq_message_storage_flag_state
+enum _enum_libmqttlink_message_storage_flag_state
 {
-    e_libmqttlink_mosq_message_storage_flag_state_message_dont_keep,
-    e_libmqttlink_mosq_message_storage_flag_state_message_keep
+    e_libmqttlink_message_storage_flag_state_message_dont_keep,
+    e_libmqttlink_message_storage_flag_state_message_keep
 };
 
 /**
@@ -47,7 +47,7 @@ void libmqttlink_finished_mosq(void);
  * @param message_storage_flag_state Flag to control message retention by the broker.
  * @return 0 on success, negative value on error.
  */
-int libmqttlink_send_mosq_message(const char *subject, const char *message_contents, enum _enum_libmqttlink_mosq_message_storage_flag_state message_storage_flag_state);
+int libmqttlink_send_mosq_message(const char *subject, const char *message_contents, enum _enum_libmqttlink_message_storage_flag_state message_storage_flag_state);
 
 /**
  * Subscribes to a topic and sets a callback function for incoming messages.
@@ -59,12 +59,12 @@ int libmqttlink_subscribe_mosq_subject(const char *subject, void (*notification_
 
 /**
  * Returns the current connection state of the MQTT link.
- * @return Connection state as enum _enum_libmqttlink_mosq_connection_state.
+ * @return Connection state as enum _enum_libmqttlink_connection_state.
  */
-enum _enum_libmqttlink_mosq_connection_state libmqttlink_get_mosq_connection_state(void);
+enum _enum_libmqttlink_connection_state libmqttlink_get_mosq_connection_state(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // LIBMQTTLINK_MOSQ_H
+#endif // libmqttlink_H

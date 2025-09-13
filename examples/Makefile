@@ -1,4 +1,4 @@
-PROJECT = test_mqttlink_mosq
+PROJECT = test_mqttlink
 CC = gcc
 CPP = g++
 CFLAGS = -Wall -O3

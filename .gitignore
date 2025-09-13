@@ -6,3 +6,4 @@ libmqttlink.so
 *.avi
 *.log
 *.mp4
+test_mqttlink_mosq

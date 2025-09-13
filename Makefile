@@ -17,8 +17,8 @@ build_mqttlink_mosq=
 ifeq ($(mqttlink_mosq),1)
 params+= -DMQTTLINK_MOSQ
 libs+=-lmosquitto
-build_mqttlink_mosq=libmqttlink_mosq.o
-include_h+=./include/libmqttlink_mosq.h
+build_mqttlink_mosq=libmqttlink.o
+include_h+=./include/libmqttlink.h
 endif
 
 
@@ -39,8 +39,8 @@ mqttlink.so: $(build_mqttlink_mosq) libmqttlink_utility_functions.o
 	strip --strip-unneeded libmqttlink.so
 
 
-libmqttlink_mosq.o: src/libmqttlink_mosq.c include/libmqttlink_mosq.h
-	gcc -O3 -Wall -fpic -c src/libmqttlink_mosq.c $(params)
+libmqttlink.o: src/libmqttlink.c include/libmqttlink.h
+	gcc -O3 -Wall -fpic -c src/libmqttlink.c $(params)
 
 libmqttlink_utility_functions.o: src/libmqttlink_utility_functions.c include/libmqttlink_utility_functions.h
 	g++ -O3 -Wall -fpic -c src/libmqttlink_utility_functions.c $(params)

@@ -1,6 +1,6 @@
 #include <signal.h>
 #include <stdio.h>
-#include <libmqttlink/libmqttlink_mosq.h>
+#include <libmqttlink/libmqttlink.h>
 #include <libmqttlink/libmqttlink_utility_functions.h>
 
 // Signal handler for graceful exit
@@ -42,7 +42,7 @@ int main(void)
         if (g_exit_signal != 0)
             break;
 
-        if (libmqttlink_get_mosq_connection_state() == e_libmqttlink_mosq_connection_state_connection_true)
+        if (libmqttlink_get_mosq_connection_state() == e_libmqttlink_connection_state_connection_true)
         {
             // Send a message to alternating topics
             char buffer_msg[256];
@@ -50,12 +50,12 @@ int main(void)
             if (i % 2)
             {
                 sprintf(buffer_msg, "%d-test-message-topic: %s .", i, topic1);
-                libmqttlink_send_mosq_message(topic1, buffer_msg, e_libmqttlink_mosq_message_storage_flag_state_message_dont_keep);
+                libmqttlink_send_mosq_message(topic1, buffer_msg, e_libmqttlink_message_storage_flag_state_message_dont_keep);
             }
             else
             {
                 sprintf(buffer_msg, "%d-test-message-topic: %s .", i, topic2);
-                libmqttlink_send_mosq_message(topic2, buffer_msg, e_libmqttlink_mosq_message_storage_flag_state_message_dont_keep);
+                libmqttlink_send_mosq_message(topic2, buffer_msg, e_libmqttlink_message_storage_flag_state_message_dont_keep);
             }
         }
 
