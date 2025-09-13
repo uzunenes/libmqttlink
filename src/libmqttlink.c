@@ -12,8 +12,8 @@
 // Structure for notification callback and topic
 struct struct_notification_structer
 {
-    void (*notification_function_ptr)(const char *message_contents, const char *subject);
-    char subject[1024];
+    void (*notification_function_ptr)(const char *message_contents, const char *topic);
+    char topic[1024];
     pthread_t thread_id;
 };
 
@@ -54,7 +54,7 @@ static void message_received_callback(struct mosquitto *mosq, void *obj, const s
     uint8_t n = ptr->number_of_notification_structer;
     for (uint8_t i = 0; i < n; i++)
     {
-        if (!strcmp(ptr->notification_structer_ptr[i].subject, msg->topic))
+        if (!strcmp(ptr->notification_structer_ptr[i].topic, msg->topic))
         {
             ptr->notification_structer_ptr[i].notification_function_ptr(
                 (char *)msg->payload,
@@ -92,18 +92,18 @@ static int subscribe_all_topics(void)
             int result = mosquitto_subscribe(
                 ptr->mosquitto_structer_ptr,
                 mid,
-                ptr->notification_structer_ptr[i].subject,
+                ptr->notification_structer_ptr[i].topic,
                 qos
             );
             if (result != MOSQ_ERR_SUCCESS)
             {
                 printf("%s(): Could not subscribe to topic [%s]. Reason: [%s]\n", __func__,
-                       ptr->notification_structer_ptr[i].subject,
+                       ptr->notification_structer_ptr[i].topic,
                        mosquitto_strerror(result));
             }
             else
             {
-                printf("%s(): Subscribed to topic [%s].\n", __func__, ptr->notification_structer_ptr[i].subject);
+                printf("%s(): Subscribed to topic [%s].\n", __func__, ptr->notification_structer_ptr[i].topic);
                 subs_counter++;
             }
         }
@@ -127,17 +127,17 @@ static int unsubscribe_all_topics(void)
             int result = mosquitto_unsubscribe(
                 ptr->mosquitto_structer_ptr,
                 mid,
-                ptr->notification_structer_ptr[i].subject
+                ptr->notification_structer_ptr[i].topic
             );
             if (result != MOSQ_ERR_SUCCESS)
             {
                 printf("%s(): Could not unsubscribe from topic [%s]. Reason: [%s]\n", __func__,
-                       ptr->notification_structer_ptr[i].subject,
+                       ptr->notification_structer_ptr[i].topic,
                        mosquitto_strerror(result));
             }
             else
             {
-                printf("%s(): Unsubscribed from topic [%s].\n", __func__, ptr->notification_structer_ptr[i].subject);
+                printf("%s(): Unsubscribed from topic [%s].\n", __func__, ptr->notification_structer_ptr[i].topic);
                 unsubs_counter++;
             }
         }
@@ -228,7 +228,7 @@ static void* connection_state_thread(void *login_info_ptr)
 /**
  * Establishes a connection to the MQTT broker and monitors the connection state.
  */
-int libmqttlink_establishes_connection_and_follows(const char *server_ip_address, int server_port, const char *user_name, const char *password)
+int libmqttlink_connect_and_monitor(const char *server_ip_address, int server_port, const char *user_name, const char *password)
 {
     struct struct_libmqttlink_struct *ptr = &g_libmqttlink_struct;
     if (ptr->notification_structer_ptr != NULL)
@@ -293,7 +293,7 @@ void libmqttlink_shutdown(void)
 /**
  * Publishes a message to a topic.
  */
-int libmqttlink_send_message(const char *subject, const char *message_contents, enum _enum_libmqttlink_message_storage_flag_state message_storage_flag_state)
+int libmqttlink_publish_message(const char *topic, const char *message_contents, enum _enum_libmqttlink_message_storage_flag_state message_storage_flag_state)
 {
     struct struct_libmqttlink_struct *ptr = &g_libmqttlink_struct;
     if (ptr->connection_state_flag == e_libmqttlink_connection_state_connection_false)
@@ -308,7 +308,7 @@ int libmqttlink_send_message(const char *subject, const char *message_contents, 
     int result = mosquitto_publish(
         ptr->mosquitto_structer_ptr,
         mid,
-        subject,
+        topic,
         message_length,
         message_contents,
         qos,
@@ -327,9 +327,9 @@ int libmqttlink_send_message(const char *subject, const char *message_contents, 
 /**
  * Subscribes to a topic and sets a callback function for incoming messages.
  */
-int libmqttlink_subscribe_subject(const char *subject, void (*notification_function_ptr)(const char *message_contents, const char *subject))
+int libmqttlink_subscribe_topic(const char *topic, void (*notification_function_ptr)(const char *message_contents, const char *topic))
 {
-    if (notification_function_ptr == NULL || subject == NULL)
+    if (notification_function_ptr == NULL || topic == NULL)
     {
         printf("%s(): NULL values are not allowed.\n", __func__);
         return -1;
@@ -349,7 +349,7 @@ int libmqttlink_subscribe_subject(const char *subject, void (*notification_funct
     }
 
     int idx = ptr->number_of_notification_structer - 1;
-    strcpy(ptr->notification_structer_ptr[idx].subject, subject);
+    strcpy(ptr->notification_structer_ptr[idx].topic, topic);
     ptr->notification_structer_ptr[idx].notification_function_ptr = notification_function_ptr;
 
     subsc_fonk_check_flag = 0; // subscribe flag open

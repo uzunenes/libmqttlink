@@ -33,7 +33,7 @@ enum _enum_libmqttlink_message_storage_flag_state
  * @param password Password for authentication.
  * @return 0 on success, -1 on error.
  */
-int libmqttlink_establishes_connection_and_follows(const char *server_ip_address, int server_port, const char *user_name, const char *password);
+int libmqttlink_connect_and_monitor(const char *server_ip_address, int server_port, const char *user_name, const char *password);
 
 /**
  * Closes the MQTT broker connection and cleans up resources.
@@ -42,20 +42,20 @@ void libmqttlink_shutdown(void);
 
 /**
  * Publishes a message to a topic.
- * @param subject Topic to publish the message to.
+ * @param topic Topic to publish the message to.
  * @param message_contents Message content.
  * @param message_storage_flag_state Flag to control message retention by the broker.
  * @return 0 on success, negative value on error.
  */
-int libmqttlink_send_message(const char *subject, const char *message_contents, enum _enum_libmqttlink_message_storage_flag_state message_storage_flag_state);
+int libmqttlink_publish_message(const char *topic, const char *message_contents, enum _enum_libmqttlink_message_storage_flag_state message_storage_flag_state);
 
 /**
  * Subscribes to a topic and sets a callback function for incoming messages.
- * @param subject Topic to subscribe to.
+ * @param topic Topic to subscribe to.
  * @param notification_function_ptr Callback function for received messages.
  * @return 0 on success, negative value on error.
  */
-int libmqttlink_subscribe_subject(const char *subject, void (*notification_function_ptr)(const char *message_contents, const char *subject));
+int libmqttlink_subscribe_topic(const char *topic, void (*notification_function_ptr)(const char *message_contents, const char *topic));
 
 /**
  * Returns the current connection state of the MQTT link.
