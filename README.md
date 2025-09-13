@@ -24,22 +24,24 @@ sudo make install
 
 | Function | Purpose | Returns |
 |---|---|---|
-| `libmqttlink_establishes_connection_and_follows(cfg*)` | Start and maintain the background connection | `int` (0 = ok) |
-| `libmqttlink_subscribe_subject(topic, cb)` | Subscribe to a topic and dispatch messages to `cb` | `int` |
-| `libmqttlink_send_message(topic, payload, retain)` | Publish to a topic | `int` |
+| `libmqttlink_connect_and_monitor(server, port, user, pass)` | Start and maintain the background connection | `int` (0 = ok) |
+| `libmqttlink_subscribe_topic(topic, cb)` | Subscribe to a topic and dispatch messages to `cb` | `int` |
+| `libmqttlink_publish_message(topic, payload, retain)` | Publish to a topic | `int` |
 | `libmqttlink_get_connection_state()` | Get connection state (online/offline) | `enum` |
 | `libmqttlink_shutdown()` | Stop background worker and release resources | `void` |
-
-> Terminology: The library names use “subject”; in this README we use **topic** consistently (same concept in MQTT).
-
 
 ## Errors & Logging
 
 - Functions return `0` on success and non-zero on failure.
+- The library prints log messages to `stdout`/`stderr`.
 
 ## Examples
 
-See the `examples/` directory for a minimal subscriber/publisher. You can test quickly with a local broker (e.g., Mosquitto).
+See the `examples/` directory for a minimal subscriber/publisher. You can test quickly with a local broker (e.g., Mosquitto):
+
+```bash
+./example <server_ip> <port> <username> <password>
+```
 
 ## License
 
