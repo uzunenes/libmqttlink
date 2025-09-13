@@ -28,21 +28,21 @@ int main(void)
     signal(SIGTERM, exit_signal_handler);
 
     // Connect to MQTT broker
-    libmqttlink_establishes_mosq_connection_and_follows(server_ip_address, server_port, user_name, password);
+    libmqttlink_establishes_connection_and_follows(server_ip_address, server_port, user_name, password);
 
     // Subscribe to topics
-    libmqttlink_subscribe_mosq_subject(topic1, message_arrived_callback);
-    libmqttlink_subscribe_mosq_subject(topic2, message_arrived_callback);
+    libmqttlink_subscribe_subject(topic1, message_arrived_callback);
+    libmqttlink_subscribe_subject(topic2, message_arrived_callback);
 
     int i = 0;
     while (1)
     {
-        printf("%s(): Mosq connection status: [%d]\n", __func__, libmqttlink_get_mosq_connection_state());
+        printf("%s(): MQTT connection status: [%d]\n", __func__, libmqttlink_get_connection_state());
 
         if (g_exit_signal != 0)
             break;
 
-        if (libmqttlink_get_mosq_connection_state() == e_libmqttlink_connection_state_connection_true)
+        if (libmqttlink_get_connection_state() == e_libmqttlink_connection_state_connection_true)
         {
             // Send a message to alternating topics
             char buffer_msg[256];
@@ -50,12 +50,12 @@ int main(void)
             if (i % 2)
             {
                 sprintf(buffer_msg, "%d-test-message-topic: %s .", i, topic1);
-                libmqttlink_send_mosq_message(topic1, buffer_msg, e_libmqttlink_message_storage_flag_state_message_dont_keep);
+                libmqttlink_send_message(topic1, buffer_msg, e_libmqttlink_message_storage_flag_state_message_dont_keep);
             }
             else
             {
                 sprintf(buffer_msg, "%d-test-message-topic: %s .", i, topic2);
-                libmqttlink_send_mosq_message(topic2, buffer_msg, e_libmqttlink_message_storage_flag_state_message_dont_keep);
+                libmqttlink_send_message(topic2, buffer_msg, e_libmqttlink_message_storage_flag_state_message_dont_keep);
             }
         }
 
@@ -63,7 +63,7 @@ int main(void)
     }
 
     // Disconnect and cleanup
-    libmqttlink_finished_mosq();
+    libmqttlink_shutdown();
     printf("bye :)\n");
 
     return 0;

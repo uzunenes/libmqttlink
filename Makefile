@@ -5,19 +5,19 @@ version=$(shell head -1 Version)
 #########################################
 # Open module -> 1
 # Close module -> 0
-mqttlink_mosq=1
+mqttlink=1
 ##########################################
 
 
 params=
 libs=
-build_mqttlink_mosq=
+build_mqttlink=
 
 
-ifeq ($(mqttlink_mosq),1)
-params+= -DMQTTLINK_MOSQ
+ifeq ($(mqttlink),1)
+params+= -DMQTTLINK
 libs+=-lmosquitto
-build_mqttlink_mosq=libmqttlink.o
+build_mqttlink=libmqttlink.o
 include_h+=./include/libmqttlink.h
 endif
 
@@ -34,8 +34,8 @@ endif
 
 all: mqttlink.so
 
-mqttlink.so: $(build_mqttlink_mosq) libmqttlink_utility_functions.o
-	g++ -shared -o libmqttlink.so $(build_mqttlink_mosq) libmqttlink_utility_functions.o $(libs) $(params) -lpthread 
+mqttlink.so: $(build_mqttlink) libmqttlink_utility_functions.o
+	g++ -shared -o libmqttlink.so $(build_mqttlink) libmqttlink_utility_functions.o $(libs) $(params) -lpthread 
 	strip --strip-unneeded libmqttlink.so
 
 
