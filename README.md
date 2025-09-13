@@ -17,7 +17,7 @@ Compared to using a raw MQTT C client directly, `libmqttlink` provides:
 - **Lifecycle handled for you:** background worker, health monitoring, clean teardown.
 - **Resilience out of the box:** automatic reconnect + automatic re‑subscribe.
 - **Topic routing:** multiple topics mapped to per‑topic callbacks.
-- **Sane defaults:** conservative QoS behavior (QoS‑2‑style), practical logging.
+- **Sane defaults:** practical logging and a minimal surface area.
 - **Thread safety:** mutex‑protected subscription and connection state.
 
 Keep your application focused on business logic; let `libmqttlink` handle the “boring but important” parts.
@@ -40,7 +40,11 @@ Keep your application focused on business logic; let `libmqttlink` handle the �
 3) **Message Handling & Publishing**
 - Dispatch inbound messages to user‑defined callbacks by topic.
 - Publish to any topic.
-- Configurable message storage flag (default **QoS 2**‑style behavior).
+- **Message storage (retain) flag** is configurable:
+  - `e_libmqttlink_message_storage_flag_state_message_keep` → ask the broker to retain
+  - `e_libmqttlink_message_storage_flag_state_message_dont_keep` → do not retain
+
+> Note: The callback currently uses `const char*` for payloads (NUL‑terminated text). If you need binary payloads, consider extending the API to include a length parameter.
 
 4) **Resource Management**
 - Clean shutdown: disconnect, free memory, and destroy threads/mutexes.
@@ -89,7 +93,7 @@ libmqttlink_shutdown();
 
 ---
 
-## API Surface (from `libmqttlink.h`)
+## API Surface (from `include/libmqttlink.h`)
 
 ```c
 // Enums
@@ -127,12 +131,11 @@ enum _enum_libmqttlink_connection_state libmqttlink_get_connection_state(void);
 
 ## Build (generic)
 
-> Prerequisites: C/C++ toolchain and an MQTT C client library’s development headers.
+> Prerequisites: a C/C++ toolchain and an MQTT C client library’s development headers (plus platform‑specific threading libs where needed).
 
 ```bash
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
+make
+sudo make install
 ```
 
 Then include the header in your application:
@@ -140,16 +143,7 @@ Then include the header in your application:
 #include <libmqttlink/libmqttlink.h>
 ```
 
-Link against the library produced by your build plus any required system libs (e.g., threads), depending on your platform.
-
----
-
-## Notes & Recommendations
-
-- **QoS:** Default behavior aligns with **QoS 2** unless configured otherwise.  
-- **Resilience:** Subscriptions are automatically restored after reconnects or broker restarts.  
-- **Threading:** Subscription/connection state is protected by internal mutexes.  
-- **Long‑running services:** A 24h periodic connection refresh helps keep links healthy.
+Link against the library produced by your build plus any required system libs (e.g., thread libs), depending on your platform.
 
 ---
 
