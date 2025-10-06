@@ -2,11 +2,10 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
-// Signal handler for graceful exit
+static void mqttlink_sleep_milisec(unsigned int milisec);
 static void exit_signal_handler(int sig);
-
-// Callback function for incoming MQTT messages
 static void message_arrived_callback(const char *message, const char *topic);
 
 // Global variable for exit signal
@@ -72,7 +71,7 @@ int main(int argc, char *argv[])
                 printf("Unsubscribed from %s\n", topic2);
             }
         }
-        libmqttlink_sleep_milisec(1000);
+        mqttlink_sleep_milisec(1000);
     }
 
     // Disconnect and cleanup
@@ -92,4 +91,9 @@ static void exit_signal_handler(int sig)
 static void message_arrived_callback(const char *message, const char *topic)
 {
     printf("%s(): Received message: [%s] - topic: [%s]\n", __func__, message, topic);
+}
+
+static void mqttlink_sleep_milisec(unsigned int milisec)
+{
+    usleep(milisec * 1000);
 }

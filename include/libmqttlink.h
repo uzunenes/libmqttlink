@@ -94,12 +94,6 @@ int libmqttlink_set_tls(const char *cafile, const char *capath, const char *cert
  */
 enum _enum_libmqttlink_connection_state libmqttlink_get_connection_state(void);
 
-// Utility helpers
-void   libmqttlink_sleep_milisec(unsigned int milisec);
-double libmqttlink_get_system_time(void);
-int    libmqttlink_get_current_system_time_and_date(char *time_date);
-int    libmqttlink_get_primary_IP(char* dst);
-
 #ifdef __cplusplus
 }
 #endif
