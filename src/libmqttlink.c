@@ -23,53 +23,6 @@
 #define NI_NUMERICHOST 0x02
 #endif
 
-static int get_mac_address(char *mac_str, size_t len)
-{
-    struct ifaddrs *ifaddr, *ifa;
-    if (getifaddrs(&ifaddr) == -1)
-        return -1;
-
-    for (ifa = ifaddr; ifa; ifa = ifa->ifa_next)
-    {
-        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_PACKET && !(ifa->ifa_flags & IFF_LOOPBACK))
-        {
-            struct sockaddr_ll *s = (struct sockaddr_ll *)ifa->ifa_addr;
-            snprintf(mac_str, len, "%02x%02x%02x%02x%02x%02x", s->sll_addr[0], s->sll_addr[1], s->sll_addr[2], s->sll_addr[3], s->sll_addr[4], s->sll_addr[5]);
-            freeifaddrs(ifaddr);
-            return 0;
-        }
-    }
-    freeifaddrs(ifaddr);
-    return -1;
-}
-
-static void generate_client_id(char *id, size_t len)
-{
-    char mac[32] = {0};
-    get_mac_address(mac, sizeof(mac));
-
-    time_t now = time(NULL);
-    int pid = getpid();
-
-    if (mac[0] != '\0')
-        snprintf(id, len, "libmqttlink-%s-%ld-%d", mac, now, pid);
-    else
-        snprintf(id, len, "libmqttlink-%ld-%d", now, pid);
-}
-
-static void mqttlink_sleep_milisec(unsigned int milisec)
-{
-    usleep(milisec * 1000);
-}
-
-static double mqttlink_get_system_time(void)
-{
-    struct timeval tv;
-    if (gettimeofday(&tv, NULL))
-        return 0;
-    return (double)tv.tv_sec + (double)tv.tv_usec * 1e-6;
-}
-
 // Structure for notification callback and topic
 struct struct_notification_structer
 {
@@ -132,6 +85,53 @@ static pthread_mutex_t g_mutex_lock;
 static pthread_mutex_t g_state_mutex; // protects connection_state_flag
 static volatile bool subsc_fonk_check_flag = 0;
 static volatile bool g_stop_flag = false; // graceful stop flag
+
+static int get_mac_address(char *mac_str, size_t len)
+{
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) == -1)
+        return -1;
+
+    for (ifa = ifaddr; ifa; ifa = ifa->ifa_next)
+    {
+        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_PACKET && !(ifa->ifa_flags & IFF_LOOPBACK))
+        {
+            struct sockaddr_ll *s = (struct sockaddr_ll *)ifa->ifa_addr;
+            snprintf(mac_str, len, "%02x%02x%02x%02x%02x%02x", s->sll_addr[0], s->sll_addr[1], s->sll_addr[2], s->sll_addr[3], s->sll_addr[4], s->sll_addr[5]);
+            freeifaddrs(ifaddr);
+            return 0;
+        }
+    }
+    freeifaddrs(ifaddr);
+    return -1;
+}
+
+static void generate_client_id(char *id, size_t len)
+{
+    char mac[32] = {0};
+    get_mac_address(mac, sizeof(mac));
+
+    time_t now = time(NULL);
+    int pid = getpid();
+
+    if (mac[0] != '\0')
+        snprintf(id, len, "libmqttlink-%s-%ld-%d", mac, now, pid);
+    else
+        snprintf(id, len, "libmqttlink-%ld-%d", now, pid);
+}
+
+static void sleep_milisec(unsigned int milisec)
+{
+    usleep(milisec * 1000);
+}
+
+static double get_system_time(void)
+{
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL))
+        return 0;
+    return (double)tv.tv_sec + (double)tv.tv_usec * 1e-6;
+}
 
 // Internal: Dispatch received messages to the correct callback (thread-safe)
 static void message_received_callback(struct mosquitto *mosq, void *obj, const struct mosquitto_message *msg)
@@ -203,7 +203,7 @@ static int subscribe_all_topics(void)
         if (subs_counter == ptr->number_of_notification_structer)
             return 0;
         attempts++;
-        mqttlink_sleep_milisec(500 + attempts * 200);
+        sleep_milisec(500 + attempts * 200);
     }
     printf("%s(): Failed to subscribe all topics after %d attempts.\n", __func__, MAX_ATTEMPTS);
     return -1;
@@ -238,7 +238,7 @@ static int unsubscribe_all_topics(void)
         if (unsubs_counter == ptr->number_of_notification_structer)
             return 0;
         attempts++;
-        mqttlink_sleep_milisec(300 + attempts * 150);
+        sleep_milisec(300 + attempts * 150);
     }
     printf("%s(): Failed to unsubscribe all topics after %d attempts.\n", __func__, MAX_ATTEMPTS);
     return -1;
@@ -315,7 +315,7 @@ static void *connection_state_thread(void *login_info_ptr)
             ptr->connection_state_flag = e_libmqttlink_connection_state_connection_false;
             pthread_mutex_unlock(&g_state_mutex);
             printf("%s(): mosquitto_loop(): Connection lost. Reason: [%s]\n", __func__, mosquitto_strerror(result));
-            mqttlink_sleep_milisec(backoff_ms);
+            sleep_milisec(backoff_ms);
             mosquitto_reconnect(ptr->mosquitto_structer_ptr);
             // exponential backoff with cap
             backoff_ms *= 2;
@@ -341,20 +341,20 @@ static void *connection_state_thread(void *login_info_ptr)
             restart_flag = 0;
         }
 
-        double now = mqttlink_get_system_time();
+        double now = get_system_time();
         const int h24_sec = 86400;
         if ((now - last_restart_time) > h24_sec)
         {
             printf("%s(): mosquitto_loop(): Restarting broker connection!\n", __func__);
             last_restart_time = now;
             unsubscribe_all_topics();
-            mqttlink_sleep_milisec(1000);
+            sleep_milisec(1000);
             mosquitto_reconnect(ptr->mosquitto_structer_ptr);
-            mqttlink_sleep_milisec(1000);
+            sleep_milisec(1000);
             restart_flag = 1;
         }
 
-        mqttlink_sleep_milisec(10);
+        sleep_milisec(10);
     }
     pthread_exit(NULL);
 }
@@ -436,7 +436,7 @@ void libmqttlink_shutdown(void)
 /**
  * Publishes a message to a topic.
  */
-int libmqttlink_publish_message(const char *topic, const char *message_contents, int qos, enum _enum_libmqttlink_message_storage_flag_state message_storage_flag_state)
+int libmqttlink_publish_message(const char *topic, const char *message_contents, int qos)
 {
     struct struct_libmqttlink_struct *ptr = &g_libmqttlink_struct;
     pthread_mutex_lock(&g_state_mutex);
@@ -450,14 +450,14 @@ int libmqttlink_publish_message(const char *topic, const char *message_contents,
 
     int *mid = NULL;
     int message_length = strlen(message_contents);
-    int result = mosquitto_publish(ptr->mosquitto_structer_ptr, mid, topic, message_length, message_contents, qos, message_storage_flag_state);
+    int result = mosquitto_publish(ptr->mosquitto_structer_ptr, mid, topic, message_length, message_contents, qos, 0);
     if (result != 0)
     {
         printf("%s(): Message could not be sent. Result: [%d]\n", __func__, result);
         return -1;
     }
 
-    mqttlink_sleep_milisec(1);
+    sleep_milisec(1);
     return 0;
 }
 

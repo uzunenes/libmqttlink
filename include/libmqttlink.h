@@ -17,15 +17,6 @@ enum _enum_libmqttlink_connection_state
 };
 
 /**
- * Message storage flag for MQTT broker.
- */
-enum _enum_libmqttlink_message_storage_flag_state
-{
-    e_libmqttlink_message_storage_flag_state_message_dont_keep,
-    e_libmqttlink_message_storage_flag_state_message_keep
-};
-
-/**
  * Establishes a connection to the MQTT broker and monitors the connection state.
  * @param server_ip_address IP address of the MQTT broker.
  * @param server_port Port number of the MQTT broker.
@@ -45,10 +36,9 @@ void libmqttlink_shutdown(void);
  * @param topic Topic to publish the message to.
  * @param message_contents Message content.
  * @param qos Quality of Service level.
- * @param message_storage_flag_state Flag to control message retention by the broker.
  * @return 0 on success, negative value on error.
  */
-int libmqttlink_publish_message(const char *topic, const char *message_contents, int qos, enum _enum_libmqttlink_message_storage_flag_state message_storage_flag_state);
+int libmqttlink_publish_message(const char *topic, const char *message_contents, int qos);
 
 /**
  * Subscribes to a topic and sets a callback function for incoming messages.

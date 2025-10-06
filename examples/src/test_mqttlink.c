@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
             const char *topic = use_first ? topic1 : topic2;
             int qos = use_first ? 1 : 0;
             snprintf(buffer_msg, sizeof(buffer_msg), "%d-test-message-topic: %s .", ++i, topic);
-            if (libmqttlink_publish_message(topic, buffer_msg, qos, e_libmqttlink_message_storage_flag_state_message_dont_keep) != 0)
+            if (libmqttlink_publish_message(topic, buffer_msg, qos) != 0)
                 fprintf(stderr, "Publish failed (%s)\n", topic);
             // Demonstrate dynamic unsubscribe after some messages
             if (i == 10)
