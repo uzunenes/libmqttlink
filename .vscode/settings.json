@@ -1,6 +1,0 @@
-{
-    "makefile.configureOnOpen": false,
-    "files.associations": {
-        "libmqttlink_utility_functions.h": "c"
-    }
-}

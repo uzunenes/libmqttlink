@@ -7,4 +7,3 @@ libmqttlink.so
 *.log
 *.mp4
 test_mqttlink
-.vscode/*
