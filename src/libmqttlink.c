@@ -22,6 +22,9 @@
 #ifndef NI_NUMERICHOST
 #define NI_NUMERICHOST 0x02
 #endif
+#ifndef IFF_LOOPBACK
+#define IFF_LOOPBACK 0x8
+#endif
 
 // Structure for notification callback and topic
 struct struct_notification_structer
@@ -85,6 +88,15 @@ static pthread_mutex_t g_mutex_lock;
 static pthread_mutex_t g_state_mutex; // protects connection_state_flag
 static volatile bool subsc_fonk_check_flag = 0;
 static volatile bool g_stop_flag = false; // graceful stop flag
+
+static char *strdup_safe(const char *src)
+{
+    if (!src) return NULL;
+    size_t len = strlen(src) + 1;
+    char *dst = malloc(len);
+    if (dst) memcpy(dst, src, len);
+    return dst;
+}
 
 static int get_mac_address(char *mac_str, size_t len)
 {
@@ -371,10 +383,14 @@ int libmqttlink_connect_and_monitor(const char *server_ip_address, int server_po
         return -1;
     }
 
-    ptr->server_ip_address = server_ip_address;
+    if (ptr->server_ip_address) free((void*)ptr->server_ip_address);
+    if (ptr->user_name) free((void*)ptr->user_name);
+    if (ptr->password) free((void*)ptr->password);
+
+    ptr->server_ip_address = server_ip_address ? strdup_safe(server_ip_address) : NULL;
     ptr->server_port = server_port;
-    ptr->user_name = user_name;
-    ptr->password = password;
+    ptr->user_name = user_name ? strdup_safe(user_name) : NULL;
+    ptr->password = password ? strdup_safe(password) : NULL;
 
     if (pthread_mutex_init(&g_mutex_lock, NULL) != 0)
     {
@@ -429,6 +445,18 @@ void libmqttlink_shutdown(void)
         ptr->mosquitto_structer_ptr = NULL;
         ptr->connection_state_flag = e_libmqttlink_connection_state_connection_false;
     }
+
+    if (ptr->server_ip_address) { free((void*)ptr->server_ip_address); ptr->server_ip_address = NULL; }
+    if (ptr->user_name) { free((void*)ptr->user_name); ptr->user_name = NULL; }
+    if (ptr->password) { free((void*)ptr->password); ptr->password = NULL; }
+    if (ptr->will_topic) { free((void*)ptr->will_topic); ptr->will_topic = NULL; }
+    if (ptr->will_payload) { free((void*)ptr->will_payload); ptr->will_payload = NULL; }
+    if (ptr->tls_cafile) { free((void*)ptr->tls_cafile); ptr->tls_cafile = NULL; }
+    if (ptr->tls_capath) { free((void*)ptr->tls_capath); ptr->tls_capath = NULL; }
+    if (ptr->tls_certfile) { free((void*)ptr->tls_certfile); ptr->tls_certfile = NULL; }
+    if (ptr->tls_keyfile) { free((void*)ptr->tls_keyfile); ptr->tls_keyfile = NULL; }
+    if (ptr->tls_version) { free((void*)ptr->tls_version); ptr->tls_version = NULL; }
+
     pthread_mutex_destroy(&g_mutex_lock);
     pthread_mutex_destroy(&g_state_mutex);
 }
@@ -561,11 +589,13 @@ int libmqttlink_set_will(const char *topic, const char *payload, int qos, int re
     struct struct_libmqttlink_struct *ptr = &g_libmqttlink_struct;
     if (ptr->mosquitto_structer_ptr != NULL)
         return -1; // must be before connect
-    ptr->will_topic = topic;
-    ptr->will_payload = payload;
+    if (ptr->will_topic) free((void*)ptr->will_topic);
+    if (ptr->will_payload) free((void*)ptr->will_payload);
+    ptr->will_topic = strdup_safe(topic);
+    ptr->will_payload = strdup_safe(payload);
     ptr->will_qos = qos;
     ptr->will_retain = retain ? 1 : 0;
-    return 0;
+    return (ptr->will_topic && ptr->will_payload) ? 0 : -1;
 }
 
 /**
@@ -576,11 +606,16 @@ int libmqttlink_set_tls(const char *cafile, const char *capath, const char *cert
     struct struct_libmqttlink_struct *ptr = &g_libmqttlink_struct;
     if (ptr->mosquitto_structer_ptr != NULL)
         return -1; // set before connect
-    ptr->tls_cafile = cafile;
-    ptr->tls_capath = capath;
-    ptr->tls_certfile = certfile;
-    ptr->tls_keyfile = keyfile;
-    ptr->tls_version = tls_version;
+    if (ptr->tls_cafile) free((void*)ptr->tls_cafile);
+    if (ptr->tls_capath) free((void*)ptr->tls_capath);
+    if (ptr->tls_certfile) free((void*)ptr->tls_certfile);
+    if (ptr->tls_keyfile) free((void*)ptr->tls_keyfile);
+    if (ptr->tls_version) free((void*)ptr->tls_version);
+    ptr->tls_cafile = cafile ? strdup_safe(cafile) : NULL;
+    ptr->tls_capath = capath ? strdup_safe(capath) : NULL;
+    ptr->tls_certfile = certfile ? strdup_safe(certfile) : NULL;
+    ptr->tls_keyfile = keyfile ? strdup_safe(keyfile) : NULL;
+    ptr->tls_version = tls_version ? strdup_safe(tls_version) : NULL;
     ptr->tls_insecure = insecure ? 1 : 0;
     return 0;
 }

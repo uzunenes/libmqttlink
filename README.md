@@ -35,54 +35,26 @@ It connects in the background, auto‑reconnects with exponential backoff, re‑
 ## Minimal code example (basic)
 
 ```c
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <libmqttlink/libmqttlink.h>
+#include <stdio.h>
+#include <unistd.h>
 
-static volatile int g_exit = 0;
-static void on_signal(int s){ (void)s; g_exit = 1; }
-static void on_message(const char *msg, const char *topic){
-    printf("message on '%s': %s\n", topic, msg);
+void on_message(const char *msg, const char *topic) 
+{
+    printf("%s: %s\n", topic, msg);
 }
 
-int main(int argc, char *argv[]) {
-    if (argc < 5) {
-        fprintf(stderr, "Usage: %s <server_ip> <port> <username> <password>\n", argv[0]);
-        return 1;
-    }
-    signal(SIGINT, on_signal);
-    signal(SIGTERM, on_signal);
-
-    /* Optional: configure Last Will & TLS BEFORE connect */
-    libmqttlink_set_will("status/lastwill", "client-offline", 1, 0);          // qos=1 retain=0
-    /* libmqttlink_set_tls(cafile, NULL, certfile, keyfile, NULL, 0); */         // example if you have certs
-
-    if (libmqttlink_connect_and_monitor(argv[1], atoi(argv[2]), argv[3], argv[4]) != 0) {
-        fprintf(stderr, "connect failed\n");
-        return 1;
+int main() 
+{
+    libmqttlink_connect_and_monitor("127.0.0.1", 1883, "user", "pass");
+    libmqttlink_subscribe_topic("a", 0, on_message);
+    
+    while (1) {
+        libmqttlink_publish_message("a", "hello", 0);
+        sleep(1);
+        if(g_exit) break;
     }
 
-    /* Subscribe with explicit QoS */
-    libmqttlink_subscribe_topic("a", 1, on_message); // QoS1
-    libmqttlink_subscribe_topic("b", 0, on_message); // QoS0
-
-    int i = 0;
-    while (!g_exit) {
-        if (libmqttlink_get_connection_state() == e_libmqttlink_connection_state_connection_true) {
-            const char *topic = (i % 2) ? "a" : "b";
-            int qos = (i % 2) ? 1 : 0;
-            char buf[128];
-            snprintf(buf, sizeof(buf), "%d-test-message-topic: %s .", ++i, topic);
-            libmqttlink_publish_message(topic, buf, qos,
-                e_libmqttlink_message_storage_flag_state_message_dont_keep);
-            if (i == 10) {
-                libmqttlink_unsubscribe_topic("b");
-                printf("Unsubscribed from b\n");
-            }
-        }
-        libmqttlink_sleep_milisec(1000);
-    }
     libmqttlink_shutdown();
     return 0;
 }
@@ -104,15 +76,11 @@ libmqttlink_connect_and_monitor(host, port, user, pass);
 | `libmqttlink_connect_and_monitor(server, port, user, pass)` | Start background thread, connect & maintain session | `int` (0 = ok) |
 | `libmqttlink_subscribe_topic(topic, qos, cb)` | Subscribe with QoS (0/1/2) and register callback | `int` |
 | `libmqttlink_unsubscribe_topic(topic)` | Remove subscription (will not auto re-subscribe) | `int` |
-| `libmqttlink_publish_message(topic, payload, qos, retainFlagEnum)` | Publish with QoS & retain flag enum | `int` |
+| `libmqttlink_publish_message(topic, payload, qos)` | Publish with QoS | `int` |
 | `libmqttlink_set_will(topic, payload, qos, retain)` | Configure LWT before connect | `int` |
 | `libmqttlink_set_tls(cafile, capath, certfile, keyfile, tls_version, insecure)` | Configure TLS before connect | `int` |
 | `libmqttlink_get_connection_state()` | Current connection state | `enum` |
 | `libmqttlink_shutdown()` | Stop worker & free resources | `void` |
-| `libmqttlink_sleep_milisec(ms)` | Sleep helper | `void` |
-| `libmqttlink_get_system_time()` | Seconds (double) since epoch | `double` |
-| `libmqttlink_get_current_system_time_and_date(buf)` | Timestamp string (microsecond) | `int` |
-| `libmqttlink_get_primary_IP(buf)` | Primary IPv4 address | `int` |
 
 ### QoS & Retain
 - QoS is per call for publish and stored per subscription.
@@ -124,16 +92,8 @@ libmqttlink_connect_and_monitor(host, port, user, pass);
 - Periodic (24h) forced reconnect currently hard‑coded (future: configurable).
 
 ## Errors & Logging
-
 - Functions return `0` on success and negative (`-1`) on failure.
 - Library currently logs to stdout using `printf` (planned: pluggable log callback & levels).
-
-## Roadmap (next)
-- Configurable reconnect & forced restart policy
-- Logging abstraction & error codes
-- Multi-instance (remove global singleton)
-- Metrics/statistics API
-- Optional offline publish queue
 
 ## Troubleshooting
 - Verify broker reachability (`ping`, firewall rules).
@@ -142,5 +102,13 @@ libmqttlink_connect_and_monitor(host, port, user, pass);
 - For TLS issues, run with `mosquitto_pub` first to validate certificates.
 
 ## License
-
 MIT — see [LICENSE](LICENSE).
+
+### Third-party dependencies
+
+This project uses the Mosquitto C client library (libmosquitto), which is dual licensed under the Eclipse Public License 2.0 (EPL-2.0) and the Eclipse Distribution License 1.0 (EDL-1.0). See:
+- https://github.com/eclipse/mosquitto/blob/master/LICENSE
+- https://www.eclipse.org/legal/epl-v20.html
+- https://www.eclipse.org/org/documents/edl-v10.php
+
+If you distribute binaries or source code including Mosquitto, you must comply with the terms of these licenses.

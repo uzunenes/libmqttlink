@@ -4,11 +4,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-static void mqttlink_sleep_milisec(unsigned int milisec);
+static void sleep_milisec(unsigned int milisec);
 static void exit_signal_handler(int sig);
 static void message_arrived_callback(const char *message, const char *topic);
 
-// Global variable for exit signal
 static int g_exit_signal = 0;
 
 int main(int argc, char *argv[])
@@ -62,8 +61,12 @@ int main(int argc, char *argv[])
             const char *topic = use_first ? topic1 : topic2;
             int qos = use_first ? 1 : 0;
             snprintf(buffer_msg, sizeof(buffer_msg), "%d-test-message-topic: %s .", ++i, topic);
+
             if (libmqttlink_publish_message(topic, buffer_msg, qos) != 0)
+            {
                 fprintf(stderr, "Publish failed (%s)\n", topic);
+            }
+
             // Demonstrate dynamic unsubscribe after some messages
             if (i == 10)
             {
@@ -71,7 +74,8 @@ int main(int argc, char *argv[])
                 printf("Unsubscribed from %s\n", topic2);
             }
         }
-        mqttlink_sleep_milisec(1000);
+
+        sleep_milisec(1000);
     }
 
     // Disconnect and cleanup
@@ -93,7 +97,7 @@ static void message_arrived_callback(const char *message, const char *topic)
     printf("%s(): Received message: [%s] - topic: [%s]\n", __func__, message, topic);
 }
 
-static void mqttlink_sleep_milisec(unsigned int milisec)
+static void sleep_milisec(unsigned int milisec)
 {
     usleep(milisec * 1000);
 }
