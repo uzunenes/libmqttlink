@@ -34,23 +34,25 @@ endif
 
 all: mqttlink.so
 
-mqttlink.so: $(build_mqttlink) libmqttlink_utility_functions.o
-	g++ -shared -o libmqttlink.so $(build_mqttlink) libmqttlink_utility_functions.o $(libs) $(params) -lpthread 
+mqttlink.so: $(build_mqttlink)
+	g++ -shared -o libmqttlink.so $(build_mqttlink) $(libs) $(params) -lpthread 
 	strip --strip-unneeded libmqttlink.so
 
 
 libmqttlink.o: src/libmqttlink.c include/libmqttlink.h
 	gcc -O3 -Wall -fpic -c src/libmqttlink.c $(params)
 
-libmqttlink_utility_functions.o: src/libmqttlink_utility_functions.c include/libmqttlink_utility_functions.h
-	g++ -O3 -Wall -fpic -c src/libmqttlink_utility_functions.c $(params)
+# Removed standalone utility compilation
+# libmqttlink_utility_functions.o: src/libmqttlink_utility_functions.c include/libmqttlink_utility_functions.h
+# 	g++ -O3 -Wall -fpic -c src/libmqttlink_utility_functions.c $(params)
 
 
 install: 
 	@rm -rf /usr/local/include/libmqttlink*
 	@mkdir -p /usr/local/include/libmqttlink
 	
-	@cp include/libmqttlink_utility_functions.h  $(include_h) /usr/local/include/libmqttlink
+	@cp $(include_h) /usr/local/include/libmqttlink
+# utility header removed
 
 	@rm -f /usr/local/lib/libmqttlink.so*
 	@cp libmqttlink.so /usr/local/lib/libmqttlink.so.$(version)
