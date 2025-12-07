@@ -40,7 +40,7 @@ struct struct_libmqttlink_struct
 {
     struct mosquitto *mosquitto_structer_ptr;
     struct struct_notification_structer *notification_structer_ptr;
-    uint8_t number_of_notification_structer;
+    uint16_t number_of_notification_structer;
     const char *server_ip_address;
     uint16_t server_port;
     const char *user_name;
@@ -151,11 +151,28 @@ static void message_received_callback(struct mosquitto *mosq, void *obj, const s
     (void)mosq;
     (void)obj;
     void (*cb)(const char *, const char *) = NULL;
+    
+    // Create null-terminated copy of payload (msg->payload may not be null-terminated)
+    char *payload_copy = NULL;
+    if (msg->payload && msg->payloadlen > 0)
+    {
+        payload_copy = (char *)malloc(msg->payloadlen + 1);
+        if (payload_copy)
+        {
+            memcpy(payload_copy, msg->payload, msg->payloadlen);
+            payload_copy[msg->payloadlen] = '\0';
+        }
+    }
+    else
+    {
+        payload_copy = strdup_safe("");
+    }
+    
     // lock while searching list
     pthread_mutex_lock(&g_mutex_lock);
     struct struct_libmqttlink_struct *ptr = &g_libmqttlink_struct;
-    uint8_t n = ptr->number_of_notification_structer;
-    for (uint8_t i = 0; i < n; i++)
+    uint16_t n = ptr->number_of_notification_structer;
+    for (uint16_t i = 0; i < n; i++)
     {
         if (!strcmp(ptr->notification_structer_ptr[i].topic, msg->topic))
         {
@@ -164,8 +181,9 @@ static void message_received_callback(struct mosquitto *mosq, void *obj, const s
         }
     }
     pthread_mutex_unlock(&g_mutex_lock);
-    if (cb)
-        cb((const char *)msg->payload, msg->topic);
+    if (cb && payload_copy)
+        cb(payload_copy, msg->topic);
+    free(payload_copy);
 }
 
 // Internal: Connection callback
@@ -188,7 +206,7 @@ static void connection_callback(struct mosquitto *mosq, void *obj, int result)
 // Internal: Subscribe to all registered topics
 static int subscribe_all_topics(void)
 {
-    int subs_counter = 0;
+    uint16_t subs_counter = 0;
     struct struct_libmqttlink_struct *ptr = &g_libmqttlink_struct;
     const int MAX_ATTEMPTS = 10;
     int attempts = 0;
@@ -196,7 +214,7 @@ static int subscribe_all_topics(void)
     {
         subs_counter = 0;
         pthread_mutex_lock(&g_mutex_lock);
-        for (int i = 0; i < ptr->number_of_notification_structer; ++i)
+        for (uint16_t i = 0; i < ptr->number_of_notification_structer; ++i)
         {
             int *mid = NULL;
             int qos = ptr->notification_structer_ptr[i].qos;
@@ -224,7 +242,7 @@ static int subscribe_all_topics(void)
 // Internal: Unsubscribe from all topics
 static int unsubscribe_all_topics(void)
 {
-    int unsubs_counter = 0;
+    uint16_t unsubs_counter = 0;
     struct struct_libmqttlink_struct *ptr = &g_libmqttlink_struct;
     const int MAX_ATTEMPTS = 10;
     int attempts = 0;
@@ -232,7 +250,7 @@ static int unsubscribe_all_topics(void)
     {
         unsubs_counter = 0;
         pthread_mutex_lock(&g_mutex_lock);
-        for (int i = 0; i < ptr->number_of_notification_structer; ++i)
+        for (uint16_t i = 0; i < ptr->number_of_notification_structer; ++i)
         {
             int *mid = NULL;
             int result = mosquitto_unsubscribe(ptr->mosquitto_structer_ptr, mid, ptr->notification_structer_ptr[i].topic);
@@ -512,7 +530,7 @@ int libmqttlink_subscribe_topic(const char *topic, int qos, void (*notification_
     pthread_mutex_lock(&g_mutex_lock);
 
     struct struct_libmqttlink_struct *ptr = &g_libmqttlink_struct;
-    uint8_t new_count = ptr->number_of_notification_structer + 1;
+    uint16_t new_count = ptr->number_of_notification_structer + 1;
     struct struct_notification_structer *tmp = (struct struct_notification_structer *)realloc(ptr->notification_structer_ptr, new_count * sizeof(struct struct_notification_structer));
     if (!tmp)
     {
@@ -544,11 +562,11 @@ int libmqttlink_unsubscribe_topic(const char *topic)
     pthread_mutex_lock(&g_mutex_lock);
     struct struct_libmqttlink_struct *ptr = &g_libmqttlink_struct;
     int found = -1;
-    for (int i = 0; i < ptr->number_of_notification_structer; ++i)
+    for (uint16_t i = 0; i < ptr->number_of_notification_structer; ++i)
     {
         if (strcmp(ptr->notification_structer_ptr[i].topic, topic) == 0)
         {
-            found = i;
+            found = (int)i;
             break;
         }
     }
@@ -557,8 +575,17 @@ int libmqttlink_unsubscribe_topic(const char *topic)
         pthread_mutex_unlock(&g_mutex_lock);
         return -1; // not found
     }
+    
+    // Send unsubscribe to broker
+    if (ptr->mosquitto_structer_ptr != NULL)
+    {
+        int rc = mosquitto_unsubscribe(ptr->mosquitto_structer_ptr, NULL, topic);
+        if (rc != MOSQ_ERR_SUCCESS)
+            printf("%s(): Failed to unsubscribe from broker: %s\n", __func__, mosquitto_strerror(rc));
+    }
+    
     // shift down
-    for (int j = found; j < ptr->number_of_notification_structer - 1; ++j)
+    for (int j = found; j < (int)ptr->number_of_notification_structer - 1; ++j)
         ptr->notification_structer_ptr[j] = ptr->notification_structer_ptr[j + 1];
     ptr->number_of_notification_structer--;
     if (ptr->number_of_notification_structer == 0)
@@ -572,13 +599,12 @@ int libmqttlink_unsubscribe_topic(const char *topic)
         if (tmp)
             ptr->notification_structer_ptr = tmp; // ignore shrink failure
     }
-    subsc_fonk_check_flag = 0; // trigger re-sync
     pthread_mutex_unlock(&g_mutex_lock);
     return 0;
 }
 
 /**
- * Sets the Last Will and Testament (LWT) for the MQTT connection.
+ * Sets the Last Will message.
  */
 int libmqttlink_set_will(const char *topic, const char *payload, int qos, int retain)
 {

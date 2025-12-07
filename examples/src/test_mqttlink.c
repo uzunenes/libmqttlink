@@ -6,7 +6,7 @@
 
 static void sleep_milisec(unsigned int milisec);
 static void exit_signal_handler(int sig);
-static void message_arrived_callback(const char *message, const char *topic);
+static void on_message_received(const char *message, const char *topic);
 
 static int g_exit_signal = 0;
 
@@ -18,57 +18,57 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    const char *server_ip_address = argv[1];
+    const char *server_ip = argv[1];
     int server_port = atoi(argv[2]);
-    const char *user_name = argv[3];
+    const char *username = argv[3];
     const char *password = argv[4];
     const char *cafile = (argc > 5) ? argv[5] : NULL;
     const char *certfile = (argc > 6) ? argv[6] : NULL;
     const char *keyfile = (argc > 7) ? argv[7] : NULL;
 
-    // Optional: configure Will (must be before connect)
+    // broker publishes this message if connection drops (must be set before connecting)
     libmqttlink_set_will("status/lastwill", "client-offline", 1, 0);
 
-    // Optional: configure TLS if CA or cert/key provided
+    // TLS settings (if certificate is provided)
     if (cafile || certfile || keyfile)
         libmqttlink_set_tls(cafile, NULL, certfile, keyfile, NULL, 0);
 
-    // Example topics
-    const char *topic1 = "a";
-    const char *topic2 = "b";
+    // topics to subscribe
+    const char *topic1 = "sensor/temperature";
+    const char *topic2 = "sensor/humidity";
 
-    // Register signal handlers
+    // signal handler for ctrl+c exit
     signal(SIGINT, exit_signal_handler);
     signal(SIGTERM, exit_signal_handler);
 
-    // Connect to MQTT broker
-    libmqttlink_connect_and_monitor(server_ip_address, server_port, user_name, password);
+    // connect to broker
+    libmqttlink_connect_and_monitor(server_ip, server_port, username, password);
 
-    // Subscribe to topics (QoS: topic1=1, topic2=0)
-    if (libmqttlink_subscribe_topic(topic1, 1, message_arrived_callback) != 0)
-        fprintf(stderr, "Subscribe failed for %s\n", topic1);
-    if (libmqttlink_subscribe_topic(topic2, 0, message_arrived_callback) != 0)
-        fprintf(stderr, "Subscribe failed for %s\n", topic2);
+    // subscribe to topics
+    if (libmqttlink_subscribe_topic(topic1, 1, on_message_received) != 0)
+        fprintf(stderr, "Subscribe failed: %s\n", topic1);
+    if (libmqttlink_subscribe_topic(topic2, 0, on_message_received) != 0)
+        fprintf(stderr, "Subscribe failed: %s\n", topic2);
 
-    int i = 0;
+    int counter = 0;
     while (!g_exit_signal)
     {
-        enum _enum_libmqttlink_connection_state st = libmqttlink_get_connection_state();
-        if (st == e_libmqttlink_connection_state_connection_true)
+        enum _enum_libmqttlink_connection_state state = libmqttlink_get_connection_state();
+        if (state == e_libmqttlink_connection_state_connection_true)
         {
-            char buffer_msg[256];
-            const int use_first = (i & 1);
+            char msg[256];
+            const int use_first = (counter & 1);
             const char *topic = use_first ? topic1 : topic2;
             int qos = use_first ? 1 : 0;
-            snprintf(buffer_msg, sizeof(buffer_msg), "%d-test-message-topic: %s .", ++i, topic);
+            snprintf(msg, sizeof(msg), "test message #%d - topic: %s", ++counter, topic);
 
-            if (libmqttlink_publish_message(topic, buffer_msg, qos) != 0)
+            if (libmqttlink_publish_message(topic, msg, qos) != 0)
             {
-                fprintf(stderr, "Publish failed (%s)\n", topic);
+                fprintf(stderr, "Failed to send message: %s\n", topic);
             }
 
-            // Demonstrate dynamic unsubscribe after some messages
-            if (i == 10)
+            // unsubscribe from second topic after 10 messages
+            if (counter == 10)
             {
                 libmqttlink_unsubscribe_topic(topic2);
                 printf("Unsubscribed from %s\n", topic2);
@@ -78,23 +78,21 @@ int main(int argc, char *argv[])
         sleep_milisec(1000);
     }
 
-    // Disconnect and cleanup
+    // close connection and cleanup
     libmqttlink_shutdown();
-    printf("bye :)\n");
+    printf("Program finished\n");
 
     return 0;
 }
 
-// Signal handler implementation
 static void exit_signal_handler(int sig)
 {
     g_exit_signal = sig;
 }
 
-// Callback for incoming messages
-static void message_arrived_callback(const char *message, const char *topic)
+static void on_message_received(const char *message, const char *topic)
 {
-    printf("%s(): Received message: [%s] - topic: [%s]\n", __func__, message, topic);
+    printf("Message received - Topic: [%s] Content: [%s]\n", topic, message);
 }
 
 static void sleep_milisec(unsigned int milisec)

@@ -35,7 +35,7 @@ endif
 all: mqttlink.so
 
 mqttlink.so: $(build_mqttlink)
-	g++ -shared -o libmqttlink.so $(build_mqttlink) $(libs) $(params) -lpthread 
+	gcc -shared -o libmqttlink.so $(build_mqttlink) $(libs) $(params) -lpthread 
 	strip --strip-unneeded libmqttlink.so
 
 

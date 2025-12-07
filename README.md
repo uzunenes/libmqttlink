@@ -1,17 +1,19 @@
 # libmqttlink
 
-Lightweight C/C++ MQTT client: background connection, auto-reconnect (exponential backoff), automatic (re)subscribe with per‑topic callbacks, optional TLS and Last Will.
+A lightweight MQTT client library written in C. It handles connection management in the background, automatically reconnects when the connection drops, and restores subscriptions. Supports TLS and Last Will.
 
-## Prerequisites
+Version: 1.0.1
 
-You need the Mosquitto C client library installed:
+## Requirements
+
+Mosquitto C library must be installed:
 
 ```bash
 sudo apt update
 sudo apt install -y libmosquitto-dev
 ```
 
-## Build & Install
+## Build and Install
 
 ```bash
 git clone https://github.com/uzunenes/libmqttlink
@@ -20,39 +22,49 @@ make
 sudo make install
 ```
 
-## Usage (quick start)
+## Example Usage
 
-Run the example client with your broker info:
+To build and run the example application:
 
 ```bash
-./test_mqttlink <server_ip> <port> <username> <password> [cafile] [certfile] [keyfile]
-# e.g.
-./test_mqttlink 127.0.0.1 1883 myuser mypass
+cd examples
+make
+./test_mqttlink 127.0.0.1 1883 username password
 ```
 
-It connects in the background, auto‑reconnects with exponential backoff, re‑subscribes, and prints any messages it receives on the demo topics (`a`, `b`). It also publishes a test message every second alternating between those topics. After 10 messages the example dynamically unsubscribes from topic `b`.
+For TLS:
 
-## Minimal code example (basic)
+```bash
+./test_mqttlink 127.0.0.1 8883 username password /path/ca.pem /path/client.crt /path/client.key
+```
+
+The example application subscribes to two topics (a and b). It publishes a message to these topics every second. After 10 messages it unsubscribes from topic b.
+
+## Basic Code Example
 
 ```c
 #include <libmqttlink/libmqttlink.h>
 #include <stdio.h>
 #include <unistd.h>
 
-void on_message(const char *msg, const char *topic) 
+void on_message(const char *message, const char *topic) 
 {
-    printf("%s: %s\n", topic, msg);
+    printf("Topic: %s, Message: %s\n", topic, message);
 }
 
 int main() 
 {
-    libmqttlink_connect_and_monitor("127.0.0.1", 1883, "user", "pass");
-    libmqttlink_subscribe_topic("a", 0, on_message);
+    // connect
+    libmqttlink_connect_and_monitor("127.0.0.1", 1883, "username", "password");
     
-    while (1) {
-        libmqttlink_publish_message("a", "hello", 0);
-        sleep(1);
-        if(g_exit) break;
+    // subscribe to topic
+    libmqttlink_subscribe_topic("sensor/temperature", 1, on_message);
+    
+    // publish messages
+    while (1) 
+    {
+        libmqttlink_publish_message("sensor/temperature", "25.5", 1);
+        sleep(5);
     }
 
     libmqttlink_shutdown();
@@ -60,55 +72,68 @@ int main()
 }
 ```
 
-## TLS + Will (quick snippet)
+## TLS and Last Will Usage
+
+TLS and Will settings must be configured before connecting:
+
 ```c
-libmqttlink_set_will("clients/123/status", "offline", 1, 1); // retain last status
-libmqttlink_set_tls("/etc/ssl/certs/ca.pem", NULL,
-                    "/etc/ssl/certs/client.crt", "/etc/ssl/private/client.key",
-                    NULL, 0); // last 0 => verify server cert
-libmqttlink_connect_and_monitor(host, port, user, pass);
+// broker publishes this message if connection drops unexpectedly
+libmqttlink_set_will("device/status", "offline", 1, 1);
+
+// TLS settings
+libmqttlink_set_tls("/etc/ssl/ca.pem", NULL, "/etc/ssl/client.crt", "/etc/ssl/client.key", NULL, 0);
+
+// now connect
+libmqttlink_connect_and_monitor("broker.example.com", 8883, "username", "password");
 ```
 
-## API — Short reference
+## Functions
 
-| Function | Purpose | Returns |
-|----------|---------|---------|
-| `libmqttlink_connect_and_monitor(server, port, user, pass)` | Start background thread, connect & maintain session | `int` (0 = ok) |
-| `libmqttlink_subscribe_topic(topic, qos, cb)` | Subscribe with QoS (0/1/2) and register callback | `int` |
-| `libmqttlink_unsubscribe_topic(topic)` | Remove subscription (will not auto re-subscribe) | `int` |
-| `libmqttlink_publish_message(topic, payload, qos)` | Publish with QoS | `int` |
-| `libmqttlink_set_will(topic, payload, qos, retain)` | Configure LWT before connect | `int` |
-| `libmqttlink_set_tls(cafile, capath, certfile, keyfile, tls_version, insecure)` | Configure TLS before connect | `int` |
-| `libmqttlink_get_connection_state()` | Current connection state | `enum` |
-| `libmqttlink_shutdown()` | Stop worker & free resources | `void` |
+libmqttlink_connect_and_monitor: Connects to the broker and monitors connection state in the background. Automatically reconnects if connection drops. Returns 0 on success, -1 on error.
 
-### QoS & Retain
-- QoS is per call for publish and stored per subscription.
-- Retain is controlled by the enum `e_libmqttlink_message_storage_flag_state_message_keep` or `_dont_keep`.
+libmqttlink_subscribe_topic: Subscribes to a topic. Takes QoS value (0, 1 or 2) and a callback function to be called when a message arrives.
 
-### Reconnect behavior
-- Exponential backoff starting at 500 ms, doubling up to 30 s.
-- Automatic re-subscribe of all active topics after reconnection.
-- Periodic (24h) forced reconnect currently hard‑coded (future: configurable).
+libmqttlink_unsubscribe_topic: Unsubscribes from a topic.
 
-## Errors & Logging
-- Functions return `0` on success and negative (`-1`) on failure.
-- Library currently logs to stdout using `printf` (planned: pluggable log callback & levels).
+libmqttlink_publish_message: Publishes a message. Takes topic, message content and QoS value.
+
+libmqttlink_set_will: Sets the Last Will message. Broker publishes this message if connection drops abnormally.
+
+libmqttlink_set_tls: Configures TLS certificate settings.
+
+libmqttlink_get_connection_state: Returns current connection state.
+
+libmqttlink_shutdown: Closes the connection and cleans up resources.
+
+## Reconnection Behavior
+
+When connection drops, the library automatically tries to reconnect. It waits 500ms on the first attempt, doubling the wait time after each failed attempt. Maximum wait time is 30 seconds. All subscriptions are automatically restored when connection is established.
+
+Connection is refreshed every 24 hours.
+
+## Error Handling
+
+All functions return 0 on success, -1 on error. The library writes error messages to stdout.
 
 ## Troubleshooting
-- Verify broker reachability (`ping`, firewall rules).
-- Check credentials and ACLs.
-- Use Mosquitto CLI tools for isolation: `mosquitto_sub -t a -h 127.0.0.1 -p 1883`.
-- For TLS issues, run with `mosquitto_pub` first to validate certificates.
+
+If connection fails:
+- Check the broker address and port
+- Verify username and password are correct
+- Check firewall settings
+- If using TLS, verify certificate paths are correct
+
+For testing, you can use mosquitto command line tools:
+
+```bash
+mosquitto_sub -t test -h 127.0.0.1 -p 1883 -u username -P password
+mosquitto_pub -t test -m "test" -h 127.0.0.1 -p 1883 -u username -P password
+```
 
 ## License
-MIT — see [LICENSE](LICENSE).
 
-### Third-party dependencies
+Distributed under the MIT license. See the LICENSE file for details.
 
-This project uses the Mosquitto C client library (libmosquitto), which is dual licensed under the Eclipse Public License 2.0 (EPL-2.0) and the Eclipse Distribution License 1.0 (EDL-1.0). See:
-- https://github.com/eclipse/mosquitto/blob/master/LICENSE
-- https://www.eclipse.org/legal/epl-v20.html
-- https://www.eclipse.org/org/documents/edl-v10.php
+## Dependencies
 
-If you distribute binaries or source code including Mosquitto, you must comply with the terms of these licenses.
+This project uses the Mosquitto C client library (libmosquitto). Mosquitto is distributed under Eclipse Public License 2.0 and Eclipse Distribution License 1.0.
